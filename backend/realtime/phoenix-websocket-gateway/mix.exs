@@ -1,0 +1,1 @@
+# Phoenix app scaffold placeholder
