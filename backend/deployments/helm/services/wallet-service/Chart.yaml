@@ -1,0 +1,9 @@
+apiVersion: v2
+name: wallet-service
+description: Helm chart for wallet-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

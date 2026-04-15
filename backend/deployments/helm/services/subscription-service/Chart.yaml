@@ -1,0 +1,9 @@
+apiVersion: v2
+name: subscription-service
+description: Helm chart for subscription-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

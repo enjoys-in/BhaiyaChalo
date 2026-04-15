@@ -1,0 +1,9 @@
+apiVersion: v2
+name: admin-api-gateway
+description: Helm chart for admin-api-gateway
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

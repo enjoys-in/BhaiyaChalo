@@ -1,0 +1,9 @@
+apiVersion: v2
+name: delivery-ack-service
+description: Helm chart for delivery-ack-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

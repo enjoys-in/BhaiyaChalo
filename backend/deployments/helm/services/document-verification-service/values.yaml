@@ -1,0 +1,28 @@
+replicaCount: 2
+
+service:
+  name: document-verification-service
+  port: 8104
+
+image:
+  repository: ghcr.io/enjoys-in/bhaiyachalo
+  tag: latest
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPU: 70
+
+env:
+  SERVICE_NAME: "document-verification-service"
+  PORT: "8104"
+  LOG_LEVEL: "info"

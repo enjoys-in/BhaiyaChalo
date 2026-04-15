@@ -1,0 +1,28 @@
+replicaCount: 2
+
+service:
+  name: driver-service
+  port: 8102
+
+image:
+  repository: ghcr.io/enjoys-in/bhaiyachalo
+  tag: latest
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPU: 70
+
+env:
+  SERVICE_NAME: "driver-service"
+  PORT: "8102"
+  LOG_LEVEL: "info"

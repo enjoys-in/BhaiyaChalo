@@ -1,0 +1,9 @@
+apiVersion: v2
+name: route-planning-service
+description: Helm chart for route-planning-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

@@ -1,0 +1,10 @@
+package handler
+
+import "net/http"
+
+func (h *ReviewModerationHandler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /api/v1/review-moderation", h.Create)
+	mux.HandleFunc("GET /api/v1/review-moderation/{id}", h.GetByID)
+	mux.HandleFunc("PUT /api/v1/review-moderation/{id}", h.Update)
+	mux.HandleFunc("DELETE /api/v1/review-moderation/{id}", h.Delete)
+}

@@ -1,0 +1,16 @@
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+env:
+  LOG_LEVEL: "debug"
+  ENVIRONMENT: "dev"

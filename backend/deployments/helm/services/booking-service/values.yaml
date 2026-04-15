@@ -1,0 +1,28 @@
+replicaCount: 2
+
+service:
+  name: booking-service
+  port: 8201
+
+image:
+  repository: ghcr.io/enjoys-in/bhaiyachalo
+  tag: latest
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPU: 70
+
+env:
+  SERVICE_NAME: "booking-service"
+  PORT: "8201"
+  LOG_LEVEL: "info"

@@ -1,0 +1,106 @@
+name: Deploy Changed Services
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/enjoys-in/bhaiyachalo
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build deploy matrix
+        id: set-matrix
+        run: |
+          BASE=${{ github.event.before }}
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+
+          MATRIX="[]"
+
+          # Services
+          SVC_DIRS=$(echo "$CHANGED" | grep -oP 'services/[^/]+/[^/]+' | sort -u || true)
+          for svc in $SVC_DIRS; do
+            NAME=$(basename "$svc")
+            MATRIX=$(echo "$MATRIX" | jq -c ". + [{\"path\": \"$svc\", \"name\": \"$NAME\", \"type\": \"service\"}]")
+          done
+
+          # Gateways
+          GW_DIRS=$(echo "$CHANGED" | grep -oP 'apps/[^/]+' | sort -u || true)
+          for gw in $GW_DIRS; do
+            NAME=$(basename "$gw")
+            MATRIX=$(echo "$MATRIX" | jq -c ". + [{\"path\": \"$gw\", \"name\": \"$NAME\", \"type\": \"gateway\"}]")
+          done
+
+          echo "matrix={\"include\":$MATRIX}" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.matrix != '{"include":[]}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.path }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}/${{ matrix.name }}:${{ github.sha }}
+            ${{ env.IMAGE_BASE }}/${{ matrix.name }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Determine Helm chart path
+        id: chart
+        run: |
+          if [ "${{ matrix.type }}" = "service" ]; then
+            echo "path=deployments/helm/services/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=deployments/helm/apps/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy ${{ matrix.name }}
+        run: |
+          helm upgrade --install ${{ matrix.name }} \
+            ${{ steps.chart.outputs.path }} \
+            -f deployments/helm/environments/prod/values.yaml \
+            --set image.tag=${{ github.sha }} \
+            --namespace bhaiyachalo \
+            --create-namespace \
+            --wait --timeout 5m

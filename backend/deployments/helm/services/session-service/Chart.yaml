@@ -1,0 +1,9 @@
+apiVersion: v2
+name: session-service
+description: Helm chart for session-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

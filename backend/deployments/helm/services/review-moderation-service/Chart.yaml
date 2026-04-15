@@ -1,0 +1,9 @@
+apiVersion: v2
+name: review-moderation-service
+description: Helm chart for review-moderation-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"

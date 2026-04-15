@@ -1,0 +1,9 @@
+apiVersion: v2
+name: analytics-ingestion-service
+description: Helm chart for analytics-ingestion-service
+type: application
+version: 0.1.0
+dependencies:
+  - name: bhaiychalo-base
+    version: "0.1.0"
+    repository: "file://../../base"
