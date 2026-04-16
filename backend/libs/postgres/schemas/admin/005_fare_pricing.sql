@@ -5,6 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS public.admin_fare_configs (
     city_id            VARCHAR(36)  NOT NULL,
+    region_id          VARCHAR(36)  NOT NULL DEFAULT '',
     vehicle_type       VARCHAR(30)  NOT NULL,
     base_price_per_km  NUMERIC(12,2) NOT NULL DEFAULT 0,
     base_price_per_min NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -25,6 +26,7 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.admin_fare_configs
 CREATE TABLE IF NOT EXISTS public.admin_pricing_rules (
     id                VARCHAR(36)   PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     city_id           VARCHAR(36)   NOT NULL,
+    region_id         VARCHAR(36)   NOT NULL DEFAULT '',
     vehicle_type      VARCHAR(30)   NOT NULL,
     base_fare_per_km  NUMERIC(12,2) NOT NULL DEFAULT 0,
     base_fare_per_min NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.admin_pricing_rules (
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.admin_pricing_rules
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
+CREATE INDEX idx_admin_pricing_rules_region ON public.admin_pricing_rules (region_id);
 CREATE INDEX idx_admin_pricing_rules_city    ON public.admin_pricing_rules (city_id, vehicle_type);
 CREATE INDEX idx_admin_pricing_rules_active  ON public.admin_pricing_rules (active) WHERE active = TRUE;
 

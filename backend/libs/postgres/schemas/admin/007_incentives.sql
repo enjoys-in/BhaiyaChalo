@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.admin_incentives (
     name         VARCHAR(200)         NOT NULL,
     description  TEXT                 NOT NULL DEFAULT '',
     city_id      VARCHAR(36)          NOT NULL DEFAULT '',
+    region_id    VARCHAR(36)          NOT NULL DEFAULT '',
     target_type  VARCHAR(30)          NOT NULL DEFAULT 'driver',
     type         admin_incentive_type NOT NULL DEFAULT 'trip_count',
     min_trips    INT                  NOT NULL DEFAULT 0,
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.admin_incentives (
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.admin_incentives
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
+CREATE INDEX idx_admin_incentives_region ON public.admin_incentives (region_id);
 CREATE INDEX idx_admin_incentives_city    ON public.admin_incentives (city_id);
 CREATE INDEX idx_admin_incentives_active  ON public.admin_incentives (active) WHERE active = TRUE;
 CREATE INDEX idx_admin_incentives_valid   ON public.admin_incentives (valid_from, valid_until);

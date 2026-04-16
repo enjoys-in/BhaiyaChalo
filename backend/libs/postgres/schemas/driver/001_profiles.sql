@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.driver_profiles (
     avatar_url      TEXT                  NOT NULL DEFAULT '',
     license_number  VARCHAR(50)           NOT NULL DEFAULT '',
     city_id         VARCHAR(36)           NOT NULL DEFAULT '',
+    region_id       VARCHAR(36)           NOT NULL DEFAULT '',
     rating          DOUBLE PRECISION      NOT NULL DEFAULT 0,
     total_trips     INT                   NOT NULL DEFAULT 0,
     status          driver_profile_status NOT NULL DEFAULT 'pending',
@@ -33,10 +34,11 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.driver_profiles
 
 CREATE INDEX idx_driver_profiles_phone   ON public.driver_profiles (phone);
 CREATE INDEX idx_driver_profiles_city    ON public.driver_profiles (city_id);
+CREATE INDEX idx_driver_profiles_region  ON public.driver_profiles (region_id);
 CREATE INDEX idx_driver_profiles_status  ON public.driver_profiles (status);
 CREATE INDEX idx_driver_profiles_rating  ON public.driver_profiles (rating);
 CREATE INDEX idx_driver_profiles_deleted ON public.driver_profiles (deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_driver_profiles_comp    ON public.driver_profiles (city_id, status, rating DESC);
+CREATE INDEX idx_driver_profiles_comp    ON public.driver_profiles (region_id, city_id, status, rating DESC);
 
 CREATE TABLE IF NOT EXISTS public.driver_locations (
     driver_id  VARCHAR(36)      PRIMARY KEY,

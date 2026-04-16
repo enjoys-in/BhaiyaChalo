@@ -2,6 +2,11 @@
 -- USER SCHEMA: Bookings
 -- Database: public | Prefix: user_
 -- Requires: postgis extension (see 000_init.sql)
+-- Requires: 000_geo_regions.sql (regions/cities)
+--
+-- GEO-SHARDING: Compound partition
+--   Level 1: LIST (region_id)  → routes to regional shard
+--   Level 2: RANGE (created_at) → monthly time partitions
 -- ============================================================
 
 CREATE TYPE user_booking_status AS ENUM (
@@ -9,11 +14,11 @@ CREATE TYPE user_booking_status AS ENUM (
     'in_progress', 'completed', 'cancelled'
 );
 
--- Partitioned by created_at for time-series queries & retention
 CREATE TABLE IF NOT EXISTS public.user_bookings (
     id              VARCHAR(36)         NOT NULL DEFAULT gen_random_uuid()::TEXT,
     user_id         VARCHAR(36)         NOT NULL,
     city_id         VARCHAR(36)         NOT NULL,
+    region_id       VARCHAR(36)         NOT NULL,
     pickup_lat      DOUBLE PRECISION    NOT NULL,
     pickup_lng      DOUBLE PRECISION    NOT NULL,
     pickup_address  TEXT                NOT NULL DEFAULT '',
@@ -45,19 +50,17 @@ CREATE TABLE IF NOT EXISTS public.user_bookings (
     CONSTRAINT chk_booking_pickup_lng CHECK (pickup_lng BETWEEN -180 AND 180),
     CONSTRAINT chk_booking_drop_lat   CHECK (drop_lat BETWEEN -90 AND 90),
     CONSTRAINT chk_booking_drop_lng   CHECK (drop_lng BETWEEN -180 AND 180)
-) PARTITION BY RANGE (created_at);
+) PARTITION BY LIST (region_id);
 
-CREATE TABLE public.user_bookings_default
-    PARTITION OF public.user_bookings DEFAULT;
-
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.user_bookings
-    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+-- Bootstrap region partitions (each sub-partitioned by created_at monthly)
+SELECT bootstrap_region_partitions('public.user_bookings', 'created_at');
 
 CREATE INDEX idx_user_bookings_user      ON public.user_bookings (user_id);
 CREATE INDEX idx_user_bookings_driver    ON public.user_bookings (driver_id) WHERE driver_id != '';
 CREATE INDEX idx_user_bookings_status    ON public.user_bookings (status);
+CREATE INDEX idx_user_bookings_region    ON public.user_bookings (region_id);
 CREATE INDEX idx_user_bookings_city      ON public.user_bookings (city_id);
 CREATE INDEX idx_user_bookings_created   ON public.user_bookings (created_at);
-CREATE INDEX idx_user_bookings_composite ON public.user_bookings (city_id, status, created_at);
+CREATE INDEX idx_user_bookings_composite ON public.user_bookings (region_id, city_id, status, created_at);
 CREATE INDEX idx_user_bookings_pickup    ON public.user_bookings USING GIST (pickup_geom);
 CREATE INDEX idx_user_bookings_drop      ON public.user_bookings USING GIST (drop_geom);

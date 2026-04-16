@@ -9,6 +9,7 @@ CREATE TYPE admin_fence_type AS ENUM ('city_boundary', 'zone', 'airport', 'restr
 CREATE TABLE IF NOT EXISTS public.admin_geofences (
     id         VARCHAR(36)      PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     city_id    VARCHAR(36)      NOT NULL,
+    region_id  VARCHAR(36)      NOT NULL DEFAULT '',
     name       VARCHAR(200)     NOT NULL,
     type       admin_fence_type NOT NULL,
     polygon    JSONB            NOT NULL DEFAULT '[]',
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.admin_geofences (
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.admin_geofences
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
+CREATE INDEX idx_admin_geofences_region   ON public.admin_geofences (region_id);
 CREATE INDEX idx_admin_geofences_city     ON public.admin_geofences (city_id);
 CREATE INDEX idx_admin_geofences_type     ON public.admin_geofences (type);
 CREATE INDEX idx_admin_geofences_active   ON public.admin_geofences (active) WHERE active = TRUE;

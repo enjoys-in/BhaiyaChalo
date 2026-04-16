@@ -2,6 +2,10 @@
 -- DRIVER SCHEMA: Match Requests
 -- Database: public | Prefix: driver_
 -- Requires: postgis extension (see 000_init.sql)
+-- Requires: 000_geo_regions.sql (regions/cities)
+--
+-- GEO-SHARDING: region_id for shard routing.
+-- Matching is inherently geo-local — only search nearby drivers.
 -- ============================================================
 
 CREATE TYPE driver_match_status AS ENUM ('searching', 'matched', 'failed');
@@ -10,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.driver_match_requests (
     id           VARCHAR(36)         PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     booking_id   VARCHAR(36)         NOT NULL,
     city_id      VARCHAR(36)         NOT NULL,
+    region_id    VARCHAR(36)         NOT NULL,
     pickup_lat   DOUBLE PRECISION    NOT NULL,
     pickup_lng   DOUBLE PRECISION    NOT NULL,
     pickup_geom  GEOMETRY(Point, 4326) GENERATED ALWAYS AS (
@@ -25,7 +30,8 @@ CREATE TABLE IF NOT EXISTS public.driver_match_requests (
 );
 
 CREATE INDEX idx_driver_match_requests_booking ON public.driver_match_requests (booking_id);
+CREATE INDEX idx_driver_match_requests_region  ON public.driver_match_requests (region_id);
 CREATE INDEX idx_driver_match_requests_city    ON public.driver_match_requests (city_id);
 CREATE INDEX idx_driver_match_requests_status  ON public.driver_match_requests (status);
 CREATE INDEX idx_driver_match_requests_geom    ON public.driver_match_requests USING GIST (pickup_geom);
-CREATE INDEX idx_driver_match_requests_comp    ON public.driver_match_requests (city_id, vehicle_type, status);
+CREATE INDEX idx_driver_match_requests_comp    ON public.driver_match_requests (region_id, city_id, vehicle_type, status);

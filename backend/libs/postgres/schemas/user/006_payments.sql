@@ -1,6 +1,11 @@
 -- ============================================================
 -- USER SCHEMA: Payments, Refunds, Wallets, Invoices
 -- Database: public | Prefix: user_
+-- Requires: 000_geo_regions.sql (regions/cities)
+--
+-- GEO-SHARDING: city_id + region_id on payments/invoices
+-- for shard routing. Payments follow the booking's region.
+-- Wallets are user-global (not geo-sharded).
 -- ============================================================
 
 CREATE TYPE user_payment_method AS ENUM ('card', 'upi', 'wallet', 'cash');
@@ -11,6 +16,8 @@ CREATE TABLE IF NOT EXISTS public.user_payments (
     id             VARCHAR(36)         PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     booking_id     VARCHAR(36)         NOT NULL,
     user_id        VARCHAR(36)         NOT NULL,
+    city_id        VARCHAR(36)         NOT NULL DEFAULT '',
+    region_id      VARCHAR(36)         NOT NULL DEFAULT '',
     amount         NUMERIC(12,2)       NOT NULL DEFAULT 0,
     currency       VARCHAR(10)         NOT NULL DEFAULT 'INR',
     method         user_payment_method NOT NULL DEFAULT 'cash',
@@ -28,8 +35,9 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.user_payments
 
 CREATE INDEX idx_user_payments_booking   ON public.user_payments (booking_id);
 CREATE INDEX idx_user_payments_user      ON public.user_payments (user_id);
+CREATE INDEX idx_user_payments_region    ON public.user_payments (region_id);
 CREATE INDEX idx_user_payments_status    ON public.user_payments (status);
-CREATE INDEX idx_user_payments_composite ON public.user_payments (user_id, status, created_at);
+CREATE INDEX idx_user_payments_composite ON public.user_payments (region_id, user_id, status, created_at);
 
 CREATE TABLE IF NOT EXISTS public.user_refunds (
     id         VARCHAR(36)        PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
@@ -96,6 +104,8 @@ CREATE TABLE IF NOT EXISTS public.user_invoices (
     id             VARCHAR(36)         PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     booking_id     VARCHAR(36)         NOT NULL,
     user_id        VARCHAR(36)         NOT NULL,
+    city_id        VARCHAR(36)         NOT NULL DEFAULT '',
+    region_id      VARCHAR(36)         NOT NULL DEFAULT '',
     invoice_number VARCHAR(50)         NOT NULL UNIQUE,
     sub_total      NUMERIC(12,2)       NOT NULL DEFAULT 0,
     tax_amount     NUMERIC(12,2)       NOT NULL DEFAULT 0,
@@ -111,8 +121,9 @@ CREATE TABLE IF NOT EXISTS public.user_invoices (
 
 CREATE INDEX idx_user_invoices_booking ON public.user_invoices (booking_id);
 CREATE INDEX idx_user_invoices_user    ON public.user_invoices (user_id);
+CREATE INDEX idx_user_invoices_region  ON public.user_invoices (region_id);
 CREATE INDEX idx_user_invoices_number  ON public.user_invoices (invoice_number);
-CREATE INDEX idx_user_invoices_comp    ON public.user_invoices (user_id, status);
+CREATE INDEX idx_user_invoices_comp    ON public.user_invoices (region_id, user_id, status);
 
 CREATE TABLE IF NOT EXISTS public.user_invoice_items (
     id          VARCHAR(36)   PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,

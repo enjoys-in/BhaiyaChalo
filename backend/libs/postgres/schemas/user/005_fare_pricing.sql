@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.user_fare_calculations (
     total_fare       NUMERIC(12,2) NOT NULL DEFAULT 0,
     currency         VARCHAR(10)   NOT NULL DEFAULT 'INR',
     city_id          VARCHAR(36)   NOT NULL,
+    region_id        VARCHAR(36)   NOT NULL DEFAULT '',
     vehicle_type     VARCHAR(30)   NOT NULL,
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_fare_calc_base       CHECK (base_price      >= 0),
@@ -31,11 +32,13 @@ CREATE TABLE IF NOT EXISTS public.user_fare_calculations (
 );
 
 CREATE INDEX idx_user_fare_calculations_booking ON public.user_fare_calculations (booking_id);
+CREATE INDEX idx_user_fare_calculations_region ON public.user_fare_calculations (region_id);
 CREATE INDEX idx_user_fare_calculations_city    ON public.user_fare_calculations (city_id, vehicle_type);
 
 CREATE TABLE IF NOT EXISTS public.user_price_estimates (
     id               VARCHAR(36)      PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     city_id          VARCHAR(36)      NOT NULL,
+    region_id        VARCHAR(36)      NOT NULL DEFAULT '',
     vehicle_type     VARCHAR(30)      NOT NULL,
     distance_km      DOUBLE PRECISION NOT NULL DEFAULT 0,
     duration_min     DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -51,4 +54,5 @@ CREATE TABLE IF NOT EXISTS public.user_price_estimates (
     CONSTRAINT chk_price_est_total     CHECK (estimated_fare   >= 0)
 );
 
+CREATE INDEX idx_user_price_estimates_region ON public.user_price_estimates (region_id);
 CREATE INDEX idx_user_price_estimates_city ON public.user_price_estimates (city_id, vehicle_type);

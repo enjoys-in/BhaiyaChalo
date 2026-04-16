@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     gender        VARCHAR(20)         NOT NULL DEFAULT '',
     date_of_birth DATE,
     city_id       VARCHAR(36)         NOT NULL DEFAULT '',
+    region_id     VARCHAR(36)         NOT NULL DEFAULT '',
     status        user_profile_status NOT NULL DEFAULT 'active',
     created_at    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -30,6 +31,7 @@ CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.user_profiles
 
 CREATE INDEX idx_user_profiles_phone   ON public.user_profiles (phone);
 CREATE INDEX idx_user_profiles_email   ON public.user_profiles (email) WHERE email != '';
+CREATE INDEX idx_user_profiles_region  ON public.user_profiles (region_id);
 CREATE INDEX idx_user_profiles_city    ON public.user_profiles (city_id);
 CREATE INDEX idx_user_profiles_status  ON public.user_profiles (status);
 CREATE INDEX idx_user_profiles_deleted ON public.user_profiles (deleted_at) WHERE deleted_at IS NULL;

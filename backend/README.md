@@ -120,8 +120,120 @@ Start infra + apps: `docker compose --profile apps up -d`
 - [directory.md](directory.md) — Go workspace directory structure
 - [techstack.md](techstack.md) — service-level database and cache mapping
 
+## PostgreSQL Schema
+
+### Execution Order
+
+```
+000_init.sql                 ← Extensions (uuid-ossp, pgcrypto, postgis) + trigger functions
+000_geo_regions.sql          ← Regions, cities, shard routing functions (run 2nd)
+admin/001_iam.sql            ← Roles, permissions, policies
+admin/002_documents.sql      ← Document verification
+admin/003_geofences.sql      ← Geofence management (PostGIS)
+admin/004_surge.sql          ← Surge policies, zones, history (geo-sharded)
+admin/005_fare_pricing.sql   ← Fare configs, pricing rules, match configs
+admin/006_campaigns_promos.sql ← Campaigns, promo codes
+admin/007_incentives.sql     ← Driver/user incentives
+admin/008_trust_safety.sql   ← Fraud signals, risk scores, audit logs
+admin/009_support.sql        ← Tickets, escalations (full-text search)
+admin/010_reconciliation_templates.sql ← Payment reconciliation, templates
+user/001_auth_sessions.sql   ← Auth users, tokens, OTPs, sessions
+user/002_profiles.sql        ← Profiles, addresses, emergency contacts (PostGIS)
+user/003_bookings.sql        ← Bookings (geo-sharded, compound partitioned)
+user/004_search.sql          ← Search queries & results (PostGIS)
+user/005_fare_pricing.sql    ← Fare calculations, price estimates
+user/006_payments.sql        ← Payments, refunds, wallets, invoices
+user/007_engagement.sql      ← Promos, referrals, ratings, notifications
+driver/001_profiles.sql      ← Profiles, locations, preferences (PostGIS)
+driver/002_vehicles.sql      ← Vehicles
+driver/003_availability.sql  ← Availability, logs (geo-sharded, compound partitioned)
+driver/004_dispatch.sql      ← Dispatch offers & rounds
+driver/005_matching.sql      ← Match requests (PostGIS)
+driver/006_tracking_stops.sql ← Tracking sessions, multi-stop trips (PostGIS)
+driver/007_earnings_payouts.sql ← Earnings (geo-sharded), summaries, payouts
+000_shard_maintenance.sql    ← Partition management, archival, health checks (run last)
+```
+
+### Geo-Sharding Strategy
+
+All high-volume, location-bound data is partitioned by region for horizontal scalability.
+
+**Shard key flow:**
+```
+User opens app → lat/lng → get_city_for_location() → city_id
+                                    ↓
+              get_region_for_city(city_id) → region_id
+                                    ↓
+              INSERT INTO user_bookings (region_id, city_id, ...)
+                                    ↓
+              PostgreSQL routes to → user_bookings_north → user_bookings_north_2026_04
+```
+
+**5 Regions (logical shards):**
+
+| Region | Code | Cities |
+|--------|------|--------|
+| North India | `north` | Delhi NCR, Jaipur, Lucknow, Chandigarh |
+| South India | `south` | Bangalore, Chennai, Hyderabad, Kochi |
+| West India | `west` | Mumbai, Pune, Ahmedabad, Goa |
+| East India | `east` | Kolkata, Bhubaneswar, Patna, Guwahati |
+| Central India | `central` | Bhopal, Indore, Nagpur, Raipur |
+
+**Compound partitioned tables (LIST region → RANGE monthly):**
+
+| Table | Level 1 (Region) | Level 2 (Time) |
+|-------|-----------------|----------------|
+| `user_bookings` | `region_id` | `created_at` |
+| `driver_earnings` | `region_id` | `earned_at` |
+| `admin_surge_history` | `region_id` | `calculated_at` |
+| `driver_availability_logs` | `region_id` | `timestamp` |
+
+**All 18 geo-aware tables carry `region_id`** for shard-affinity queries:
+
+- User: profiles, bookings, search, fare_calculations, price_estimates, payments, invoices
+- Driver: profiles, availability, availability_logs, dispatch_offers, dispatch_rounds, match_requests, tracking_sessions, earnings, daily/weekly_summaries, payouts
+- Admin: geofences, surge_policies, surge_zones, surge_history, fare_configs, pricing_rules, campaigns, promo_codes, incentives
+
+**Shard routing functions:**
+
+| Function | Purpose |
+|----------|---------|
+| `get_region_for_city(city_id)` | Resolve city → region (shard key) |
+| `get_city_for_location(lat, lng)` | Auto-detect nearest city from GPS coordinates |
+| `get_region_for_location(lat, lng)` | Resolve GPS → region directly |
+| `is_within_city(city_id, lat, lng)` | Check if point is inside city boundary/radius |
+| `bootstrap_region_partitions(table, time_col)` | Create all region partitions for a table |
+| `create_monthly_partitions(parent, col, start, end)` | Create monthly sub-partitions |
+| `maintain_monthly_partitions(months_ahead)` | Auto-create upcoming partitions (pg_cron) |
+| `archive_old_partitions(months_retain)` | Detach old partitions for cold storage |
+| `partition_health_check()` | List all partitions with estimated row counts |
+| `region_traffic_stats(start, end)` | Booking + driver counts per region |
+
+**Future Citus migration (zero schema changes):**
+```sql
+SELECT create_distributed_table('user_bookings', 'region_id');
+-- Same partition structure, now distributed across physical nodes.
+```
+
+### Schema Stats
+
+| Metric | Count |
+|--------|-------|
+| Total tables | 67+ |
+| CHECK constraints | 160+ |
+| Triggers | 34 |
+| PostGIS columns | 12 |
+| GIN indexes | 12 |
+| GiST indexes | 12 |
+| Compound partitioned tables | 4 |
+| Geo-sharded tables | 18 |
+| Soft-delete tables | 14 |
+| Seeded regions | 5 |
+| Seeded cities | 20 |
+
 ## Scaffold Status
 
 - All directories and Go module skeletons created.
 - Every gateway and service has `go.mod`, `Dockerfile`, and `.env` placeholders.
+- Production-grade PostgreSQL schemas with geo-sharding.
 - No business code added yet — ready for implementation.

@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.driver_tracking_sessions (
     trip_id    VARCHAR(36) NOT NULL,
     driver_id  VARCHAR(36) NOT NULL,
     user_id    VARCHAR(36) NOT NULL,
+    city_id    VARCHAR(36) NOT NULL DEFAULT '',
+    region_id  VARCHAR(36) NOT NULL DEFAULT '',
     active     BOOLEAN     NOT NULL DEFAULT TRUE,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     ended_at   TIMESTAMPTZ
@@ -17,7 +19,8 @@ CREATE TABLE IF NOT EXISTS public.driver_tracking_sessions (
 CREATE INDEX idx_driver_tracking_sessions_trip      ON public.driver_tracking_sessions (trip_id);
 CREATE INDEX idx_driver_tracking_sessions_driver    ON public.driver_tracking_sessions (driver_id);
 CREATE INDEX idx_driver_tracking_sessions_active    ON public.driver_tracking_sessions (active) WHERE active = TRUE;
-CREATE INDEX idx_driver_tracking_sessions_composite ON public.driver_tracking_sessions (driver_id, active, started_at);
+CREATE INDEX idx_driver_tracking_sessions_region    ON public.driver_tracking_sessions (region_id);
+CREATE INDEX idx_driver_tracking_sessions_composite ON public.driver_tracking_sessions (region_id, driver_id, active, started_at);
 
 -- Multi-stop trips
 

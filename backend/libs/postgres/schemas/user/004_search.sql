@@ -2,12 +2,17 @@
 -- USER SCHEMA: Search Queries & Results
 -- Database: public | Prefix: user_
 -- Requires: postgis extension (see 000_init.sql)
+-- Requires: 000_geo_regions.sql (regions/cities)
+--
+-- GEO-SHARDING: region_id for shard routing.
+-- Searches are inherently geo-local — always within a city.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.user_search_queries (
     id         VARCHAR(36)      PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     user_id    VARCHAR(36)      NOT NULL,
     city_id    VARCHAR(36)      NOT NULL,
+    region_id  VARCHAR(36)      NOT NULL,
     pickup_lat DOUBLE PRECISION NOT NULL,
     pickup_lng DOUBLE PRECISION NOT NULL,
     pickup_geom GEOMETRY(Point, 4326) GENERATED ALWAYS AS (
@@ -26,10 +31,11 @@ CREATE TABLE IF NOT EXISTS public.user_search_queries (
 );
 
 CREATE INDEX idx_user_search_queries_user   ON public.user_search_queries (user_id);
+CREATE INDEX idx_user_search_queries_region ON public.user_search_queries (region_id);
 CREATE INDEX idx_user_search_queries_city   ON public.user_search_queries (city_id);
 CREATE INDEX idx_user_search_queries_pickup ON public.user_search_queries USING GIST (pickup_geom);
 CREATE INDEX idx_user_search_queries_drop   ON public.user_search_queries USING GIST (drop_geom);
-CREATE INDEX idx_user_search_queries_comp   ON public.user_search_queries (user_id, city_id, created_at);
+CREATE INDEX idx_user_search_queries_comp   ON public.user_search_queries (region_id, city_id, user_id, created_at);
 
 CREATE TABLE IF NOT EXISTS public.user_search_results (
     query_id          VARCHAR(36)   NOT NULL,
